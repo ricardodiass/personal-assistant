@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     app_debug: bool = True
     database_url: str = "postgresql://user:password@localhost:5432/personal_assistant"
 
+    whatsapp_verify_token: str = "change_me"
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
