@@ -1,10 +1,26 @@
+import hashlib
+import hmac
+import json
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.core.settings import settings
 
 client = TestClient(app)
 
+TEST_APP_SECRET = "segredo-de-teste"
+
+
+def sign_payload(payload: dict) -> tuple[str, str]:
+    body = json.dumps(payload).encode("utf-8")
+    signature = hmac.new(
+        TEST_APP_SECRET.encode("utf-8"),
+        body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    return body.decode("utf-8"), f"sha256={signature}"
 
 
 def test_home():
@@ -23,7 +39,6 @@ def test_health():
 
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
-
 
 
 def test_webhook_verification_success():
@@ -54,8 +69,11 @@ def test_webhook_verification_invalid_token():
     assert response.text == "Verificação do webhook recusada"
 
 
+def test_webhook_receive_text_message(monkeypatch):
+    monkeypatch.setattr(
+        settings, "whatsapp_app_secret", TEST_APP_SECRET
+    )
 
-def test_webhook_receive_text_message():
     payload = {
         "object": "whatsapp_business_account",
         "entry": [
@@ -78,7 +96,16 @@ def test_webhook_receive_text_message():
         ],
     }
 
-    response = client.post("/webhook", json=payload)
+    body, signature = sign_payload(payload)
+
+    response = client.post(
+        "/webhook",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": signature,
+        },
+    )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -95,8 +122,11 @@ def test_webhook_receive_text_message():
     }
 
 
+def test_webhook_without_messages(monkeypatch):
+    monkeypatch.setattr(
+        settings, "whatsapp_app_secret", TEST_APP_SECRET
+    )
 
-def test_webhook_without_messages():
     payload = {
         "object": "whatsapp_business_account",
         "entry": [
@@ -117,7 +147,16 @@ def test_webhook_without_messages():
         ],
     }
 
-    response = client.post("/webhook", json=payload)
+    body, signature = sign_payload(payload)
+
+    response = client.post(
+        "/webhook",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": signature,
+        },
+    )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -127,13 +166,43 @@ def test_webhook_without_messages():
     }
 
 
-
-def test_webhook_invalid_json():
-    response = client.post(
-        "/webhook",
-        content="{json-invalido",
-        headers={"Content-Type": "application/json"},
+def test_webhook_invalid_json(monkeypatch):
+    monkeypatch.setattr(
+        settings, "whatsapp_app_secret", TEST_APP_SECRET
     )
 
-    assert response.status_code == 200
-    assert response.json() == {"status": "invalid_json"}
+    body = "{json-invalido"
+    signature = "sha256=" + hmac.new(
+        TEST_APP_SECRET.encode("utf-8"),
+        body.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    response = client.post(
+        "/webhook",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": signature,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.text == "JSON inválido"
+
+
+def test_webhook_invalid_signature(monkeypatch):
+    monkeypatch.setattr(
+        settings, "whatsapp_app_secret", TEST_APP_SECRET
+    )
+
+    payload = {"object": "whatsapp_business_account"}
+
+    response = client.post(
+        "/webhook",
+        json=payload,
+        headers={"X-Hub-Signature-256": "sha256=assinatura-errada"},
+    )
+
+    assert response.status_code == 401
+    assert response.text == "Assinatura inválida"

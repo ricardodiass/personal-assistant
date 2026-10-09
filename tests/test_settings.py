@@ -23,3 +23,12 @@ def test_settings_environment_variables(monkeypatch):
     assert config.app_name == "Assistente de Teste"
     assert config.app_env == "testing"
     assert config.app_debug is False
+
+
+
+def test_settings_whatsapp_app_secret(monkeypatch):
+    monkeypatch.setenv("WHATSAPP_APP_SECRET", "segredo-de-teste")
+
+    config = Settings(_env_file=None)
+
+    assert config.whatsapp_app_secret == "segredo-de-teste"

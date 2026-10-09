@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = "change_me"
     whatsapp_access_token: str = ""
     whatsapp_phone_number_id: str = ""
+    whatsapp_app_secret: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
