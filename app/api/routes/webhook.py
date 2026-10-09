@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import PlainTextResponse
 
 from app.core.settings import settings
@@ -24,3 +24,33 @@ def verify_webhook(
         content="Verificação do webhook recusada",
         status_code=403,
     )
+
+
+@router.post("")
+async def receive_webhook(request: Request):
+    try:
+        payload = await request.json()
+    except ValueError:
+        return {"status": "invalid_json"}
+
+    messages = []
+
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value", {})
+
+            for message in value.get("messages", []):
+                messages.append(
+                    {
+                        "from": message.get("from"),
+                        "id": message.get("id"),
+                        "type": message.get("type"),
+                        "text": message.get("text", {}).get("body"),
+                    }
+                )
+
+    return {
+        "status": "received",
+        "messages_count": len(messages),
+        "messages": messages,
+    }
