@@ -6,6 +6,7 @@ from app.main import app
 client = TestClient(app)
 
 
+
 def test_home():
     response = client.get("/")
 
@@ -13,6 +14,7 @@ def test_home():
     assert response.json() == {
         "message": "Personal Assistant está funcionando!",
         "status": "online",
+        "environment": "development",
     }
 
 

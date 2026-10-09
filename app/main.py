@@ -1,19 +1,23 @@
+
 from fastapi import FastAPI
 
 from app.api.routes.health import router as health_router
+from app.core.settings import settings
 
 app = FastAPI(
-    title="Personal Assistant",
+    title=settings.app_name,
     description="Assistente pessoal integrado ao WhatsApp",
     version="0.1.0",
+    debug=settings.app_debug,
 )
 
 
 @app.get("/")
 def home():
     return {
-        "message": "Personal Assistant está funcionando!",
+        "message": f"{settings.app_name} está funcionando!",
         "status": "online",
+        "environment": settings.app_env,
     }
 
 
