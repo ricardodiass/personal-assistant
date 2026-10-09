@@ -206,3 +206,17 @@ def test_webhook_invalid_signature(monkeypatch):
 
     assert response.status_code == 401
     assert response.text == "Assinatura inválida"
+
+
+def test_webhook_missing_signature(monkeypatch):
+    monkeypatch.setattr(
+        settings, "whatsapp_app_secret", TEST_APP_SECRET
+    )
+
+    response = client.post(
+        "/webhook",
+        json={"object": "whatsapp_business_account"},
+    )
+
+    assert response.status_code == 401
+    assert response.text == "Assinatura inválida"
